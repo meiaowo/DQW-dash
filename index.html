@@ -1,4 +1,4 @@
-<!-- index.html v1.6.0 (id生成の長音符バグ修正／mergeWithSeedの名前重複防止) -->
+<!-- index.html v1.9.0 (A/B/C削除・同名上書き + 使い方Tipsタブ) -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -34,7 +34,8 @@ body {
 .header h1 { font-size: 22px; margin: 4px 0 2px; color: var(--title); letter-spacing: 1px; font-weight: 700; }
 .header .sub { font-size: 10px; color: var(--textFaint); }
 #themeBtn { position: absolute; right: 14px; top: 18px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--cardBorder); background: var(--cardBg); color: var(--text); font-size: 17px; cursor: pointer; }
-.tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs .btn { min-width: 0; }
 .card { background: var(--cardBg); border: 1px solid var(--cardBorder); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
 .label { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
 select, input[type=text], textarea {
@@ -69,6 +70,32 @@ textarea { min-height: 120px; font-family: ui-monospace, monospace; font-size: 1
 .db-row .nm { font-size: 13px; font-weight: 700; }
 .db-row .src { font-size: 10px; color: var(--textFaint); }
 .db-row button { flex: none; padding: 6px 10px; font-size: 11px; }
+.db-sort-note { font-size: 10px; color: var(--textFainter); margin: -4px 0 10px; padding: 0 2px; }
+.db-type-sec { border: 1px solid var(--cardBorder); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+.db-type-hdr {
+  width: 100%; text-align: left; padding: 10px 12px; background: var(--innerBg);
+  border: none; color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.db-type-hdr .chev { font-size: 10px; color: var(--textFaint); width: 14px; flex: none; }
+.db-type-hdr .cnts { font-weight: 600; color: var(--textSub); font-size: 12px; }
+.db-type-body { padding: 0 10px 4px; }
+.db-type-body.collapsed { display: none; }
+.db-dup-group { font-size: 10px; color: #d86a6a; padding: 8px 0 2px; margin-top: 2px; border-bottom: 1px dashed var(--divider); }
+.db-sel-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.db-sel-toolbar .note { margin: 0; }
+.db-row input.db-sel { flex: none; width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+.sel-all-wrap { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--textSub); cursor: pointer; user-select: none; }
+.sel-all-wrap input { width: 14px; height: 14px; accent-color: var(--gold); }
+.tip-card { background: var(--innerBg); border: 1px solid var(--cardBorder); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+.tip-card .tip-title { font-size: 14px; font-weight: 700; color: var(--title); margin-bottom: 4px; }
+.tip-card .tip-meta { font-size: 10px; color: var(--textFaint); margin-bottom: 6px; line-height: 1.5; }
+.tip-card .tip-summary { font-size: 12.5px; color: var(--textSub); line-height: 1.6; margin-bottom: 6px; }
+.tip-card .tip-body { font-size: 12px; color: var(--skillDesc); line-height: 1.65; white-space: pre-wrap; margin-bottom: 6px; }
+.tip-card .tip-sources a { font-size: 11px; color: #7aa8f0; word-break: break-all; display: block; margin-bottom: 2px; }
+.tip-card .tip-tags { margin-top: 4px; }
+
+
 .msg { font-size: 12px; margin-top: 8px; color: var(--goldText); line-height: 1.6; white-space: pre-line; }
 .steal-card { opacity: 1; }
 .steal-card.nodata { opacity: 0.55; }
@@ -131,6 +158,7 @@ body.light .hl {
   <button class="btn" id="tab-steal">👑 奪取</button>
   <button class="btn" id="tab-sim">⚔ 継承</button>
   <button class="btn" id="tab-db">📚 DB管理</button>
+  <button class="btn" id="tab-tips">💡 使い方</button>
 </div>
 
 <!-- ============ 奪取タブ ============ -->
@@ -193,6 +221,11 @@ body.light .hl {
         <option value="duplicate">🔁 重複のみ表示</option>
       </select>
     </div>
+    <div class="db-sort-note">並び: 新しい順（releasedAt → 9db ID → 追加順）</div>
+    <div class="db-sel-toolbar">
+      <button type="button" class="btn danger" id="dbSelDelete" disabled>選択を削除</button>
+      <span class="note" id="dbSelCount">選択: 0</span>
+    </div>
     <div id="dbList"></div>
   </div>
   <div class="card" style="border-color:#7aa8f066">
@@ -224,6 +257,42 @@ body.light .hl {
       <button class="btn" id="exportBtn">JSONファイルで保存</button>
     </div>
     <div class="msg" id="ioMsg"></div>
+  </div>
+</div>
+
+
+<!-- ============ 使い方Tipsタブ ============ -->
+<div class="wrap hidden" id="pane-tips">
+  <div class="card" style="border-color:#c9a24b66">
+    <div class="label" style="color:#e0a04b">💡 使い方／使用例（Tips）</div>
+    <div style="font-size:12px;color:var(--textSub);line-height:1.7">
+      新武器の流行りの使い方・使用例をカードで閲覧します。武器DBとは別データ（別localStorage）です。
+    </div>
+    <div class="note" style="margin-top:6px">初期は空。下の専用欄から Tips JSON を取り込んでください（武器JSONとは混ぜません）。</div>
+  </div>
+  <div class="card">
+    <div class="label" id="tipsCountLabel">Tips一覧（0件）</div>
+    <div class="row" style="margin-bottom:10px">
+      <select id="tipsWeaponFilter">
+        <option value="">すべての武器</option>
+      </select>
+    </div>
+    <div class="db-sort-note">並び: 新しい順（updatedAt → 取込順）</div>
+    <div id="tipsList"></div>
+  </div>
+  <div class="card">
+    <div class="label">📁 Tips JSON 専用取込（武器DBとは別）</div>
+    <input type="file" id="tipsFileInput" accept="application/json,.json" style="width:100%;background:var(--inputBg);border:1px solid var(--cardBorder);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;">
+    <div class="label" style="margin-top:14px">Tips JSON 貼り付け欄</div>
+    <textarea id="tipsIoArea" placeholder='[{"id":"tip_...","weaponName":"...","title":"...","summary":"...","body":"...","tags":[],"sources":["https://..."],"updatedAt":"2026-09-19","verified":false}]'></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn active" id="tipsImportBtn">Tipsを取り込む</button>
+      <button class="btn" id="tipsExportBtn">Tipsを保存</button>
+    </div>
+    <div class="row">
+      <button class="btn danger" id="tipsClearBtn">Tipsを全消去</button>
+    </div>
+    <div class="msg" id="tipsMsg"></div>
   </div>
 </div>
 
@@ -882,32 +951,114 @@ function importWeapons(jsonText, current) {
     try { parsed = JSON.parse(stripped); }
     catch (e2) { return { ok: false, msg: 'JSONの解析に失敗：' + e2.message }; }
   }
-  const arr = Array.isArray(parsed) ? parsed : [parsed];
-  const deficientNames = [];
-  for (let i = 0; i < arr.length; i++) {
-    const w = arr[i];
-    if (!w.id || !w.name || !w.type || !w.inherit) {
-      return { ok: false, msg: (i+1) + '件目の武器で id / name / type / inherit のいずれかが欠けています（必須項目のため取り込み不可）' };
+
+  let deleteIds = null;
+  let arr = null;
+
+  if (Array.isArray(parsed)) {
+    arr = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.delete)) deleteIds = parsed.delete.map(String);
+    else if (parsed.op === 'delete' && Array.isArray(parsed.ids)) deleteIds = parsed.ids.map(String);
+    if (Array.isArray(parsed.weapons)) arr = parsed.weapons;
+    else if (Array.isArray(parsed.items)) arr = parsed.items;
+    else if (!deleteIds) arr = [parsed];
+  } else {
+    return { ok: false, msg: '取り込めない形式です（配列またはオブジェクトが必要）' };
+  }
+
+  if (!deleteIds && !arr) {
+    return { ok: false, msg: '削除対象も武器データもありません' };
+  }
+
+  let next = current.slice();
+  const msgParts = [];
+
+  if (deleteIds) {
+    if (!deleteIds.length) return { ok: false, msg: '削除対象の id が空です' };
+    if (typeof window !== 'undefined' && window.confirm && !window.confirm(deleteIds.length + '件削除しますか？')) {
+      return { ok: false, msg: '削除をキャンセルしました' };
     }
-    // データ不備（skillのdesc空など）は取り込みをブロックせず、後で🚨バッジで分かるようにするだけに留める
-    const reason = getDeficiencyReason(w);
-    if (reason) deficientNames.push((i+1) + '件目「' + w.name + '」：' + reason);
+    const delResult = applyDeleteIds(next, deleteIds);
+    next = delResult.weapons;
+    let dmsg = delResult.removed + '件削除';
+    if (delResult.skipped) dmsg += '（未存在スキップ ' + delResult.skipped + '件）';
+    msgParts.push(dmsg);
   }
-  const map = new Map(current.map(function(w){ return [w.id, w]; }));
-  arr.forEach(function(w){
-    map.set(w.id, Object.assign({ verified: false, skills: [], ikinari: [], chosen: [], passives: [], limitBreakEffects: [], rarity: 5 }, w));
+
+  if (arr && arr.length) {
+    const deficientNames = [];
+    for (let i = 0; i < arr.length; i++) {
+      const w = arr[i];
+      if (!w || !w.id || !w.name || !w.type || !w.inherit) {
+        return { ok: false, msg: (i+1) + '件目の武器で id / name / type / inherit のいずれかが欠けています（必須項目のため取り込み不可）' };
+      }
+      const reason = getDeficiencyReason(w);
+      if (reason) deficientNames.push((i+1) + '件目「' + w.name + '」：' + reason);
+    }
+    const mergeResult = mergeWeaponsByName(next, arr);
+    next = mergeResult.weapons;
+    let mmsg = '同名上書き ' + mergeResult.overwriteN + ' / 新規 ' + mergeResult.newN;
+    if (deficientNames.length) {
+      mmsg += '\n⚠️ ' + deficientNames.length + '件は不備あり（🚨バッジ表示・取り込みは実施）：\n' + deficientNames.join('\n');
+    }
+    msgParts.push(mmsg);
+  } else if (arr && arr.length === 0) {
+    msgParts.push('武器データ0件（変更なし）');
+  }
+
+  return { ok: true, msg: msgParts.join(' ／ '), weapons: next };
+}
+
+/** 指定 id を削除。無い id はスキップ。 */
+function applyDeleteIds(current, ids) {
+  const delSet = {};
+  ids.forEach(function(id){ delSet[String(id)] = true; });
+  const exist = {};
+  current.forEach(function(w){ exist[w.id] = true; });
+  let skipped = 0;
+  ids.forEach(function(id){ if (!exist[String(id)]) skipped++; });
+  let removed = 0;
+  const weapons = current.filter(function(w){
+    if (delSet[w.id]) { removed++; return false; }
+    return true;
   });
-  let msg = arr.length + '件の武器を取り込みました（同IDは上書き）';
-  if (deficientNames.length) {
-    msg += '\n⚠️ ' + deficientNames.length + '件は不備あり（🚨バッジ表示・取り込みは実施）：\n' + deficientNames.join('\n');
-  }
-  return { ok: true, msg: msg, weapons: Array.from(map.values()) };
+  return { weapons: weapons, removed: removed, skipped: skipped };
+}
+
+/** 同名（normalizeName）なら既存idを維持して上書き。取込側の別idは新規追加しない。 */
+function mergeWeaponsByName(current, incoming) {
+  const map = new Map();
+  current.forEach(function(w){ map.set(w.id, w); });
+  const nameToId = new Map();
+  current.forEach(function(w){
+    const k = normalizeName(w.name);
+    if (k && !nameToId.has(k)) nameToId.set(k, w.id);
+  });
+  let overwriteN = 0, newN = 0;
+  const defaults = { verified: false, skills: [], ikinari: [], chosen: [], passives: [], limitBreakEffects: [], rarity: 5 };
+  incoming.forEach(function(w){
+    const nk = normalizeName(w.name);
+    const existingId = nk ? nameToId.get(nk) : null;
+    if (existingId != null && map.has(existingId)) {
+      const prev = map.get(existingId);
+      map.set(existingId, Object.assign({}, defaults, prev, w, { id: existingId }));
+      overwriteN++;
+    } else {
+      map.set(w.id, Object.assign({}, defaults, w));
+      if (nk) nameToId.set(nk, w.id);
+      newN++;
+    }
+  });
+  return { weapons: Array.from(map.values()), overwriteN: overwriteN, newN: newN };
 }
 
 /* ============ アプリ状態 ============ */
 const LS_KEY = 'dqw-keisho-db-v3';
+const LS_TIPS = 'dqw-usage-tips-v1';
 const LS_THEME = 'dqw-keisho-theme';
-let weapons, state = { tab: 'steal', baseId: 'maou_no_ken', inhId: '', rendo: 10, lb: 0, filterType: 'すべて', dbListFilter: 'all' };
+let weapons, usageTips = [];
+let state = { tab: 'steal', baseId: 'maou_no_ken', inhId: '', rendo: 10, lb: 0, filterType: 'すべて', dbListFilter: 'all', dbOpenTypes: {}, tipsWeaponFilter: '' };
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
@@ -936,7 +1087,7 @@ $('themeBtn').addEventListener('click', function() {
 /* ============ タブ ============ */
 function showTab(tab) {
   state.tab = tab;
-  ['steal','sim','db'].forEach(function(x) {
+  ['steal','sim','db','tips'].forEach(function(x) {
     $('pane-' + x).classList.toggle('hidden', x !== tab);
     $('tab-' + x).classList.toggle('active', x === tab);
   });
@@ -944,10 +1095,12 @@ function showTab(tab) {
   if (tab === 'steal') renderSteal();
   if (tab === 'sim') renderSim();
   if (tab === 'db') renderDB();
+  if (tab === 'tips') renderTips();
 }
 $('tab-steal').addEventListener('click', function(){ showTab('steal'); });
 $('tab-sim').addEventListener('click', function(){ showTab('sim'); });
 $('tab-db').addEventListener('click', function(){ showTab('db'); });
+$('tab-tips').addEventListener('click', function(){ showTab('tips'); });
 
 /* ============ 奪取タブ ============ */
 function fillTypeSelect(sel, withAll) {
@@ -1165,72 +1318,201 @@ $('filterType').addEventListener('change', function(){ state.filterType = this.v
 $('baseSel').addEventListener('change', function(){ state.baseId = this.value; state.inhId = ''; renderSim(); });
 $('inhSel').addEventListener('change', function(){ state.inhId = this.value; renderSim(); });
 
+/* ============ DB一覧ヘルパー（純関数・_selfcheck と同期） ============ */
+/* 表記ゆれルール（ログ）: 先頭★／☆除去 / 空白除去 / 【】[]・･除去 / ウイング→ウィング（表記ゆれをウィングに寄せる） / 杖→つえ */
+function normalizeName(name) {
+  let s = String(name == null ? '' : name);
+  s = s.replace(/^[★☆]+/, '');
+  s = s.replace(/[\s\u3000]+/g, '');
+  s = s.replace(/[【】\[\]・･]/g, '');
+  s = s.replace(/ウイング/g, 'ウィング');
+  s = s.replace(/杖/g, 'つえ');
+  return s;
+}
+function parse9dbId(source) {
+  if (source == null || source === '') return null;
+  const s = String(source);
+  let m = s.match(/9db\.jp\/dqwalk\/data\/(\d+)/i);
+  if (m) return Number(m[1]);
+  m = s.match(/\/data\/(\d+)/);
+  if (m) return Number(m[1]);
+  if (/9db/i.test(s)) {
+    m = s.match(/(\d{3,})/);
+    if (m) return Number(m[1]);
+  }
+  return null;
+}
+function sortKeyNewer(w, origIndex) {
+  let primary = null;
+  if (w.releasedAt != null && w.releasedAt !== '') primary = w.releasedAt;
+  else if (w.implOrder != null && w.implOrder !== '') primary = w.implOrder;
+  const id9 = parse9dbId(w.source);
+  return { primary: primary, id9: id9, origIndex: origIndex };
+}
+function sortNewerFirst(items) {
+  /* items: [{ w, origIndex }, ...] — newer first */
+  return items.slice().sort(function(a, b) {
+    const ka = sortKeyNewer(a.w, a.origIndex);
+    const kb = sortKeyNewer(b.w, b.origIndex);
+    if (ka.primary != null && kb.primary != null) {
+      if (ka.primary !== kb.primary) return ka.primary > kb.primary ? -1 : 1;
+    } else if (ka.primary != null) return -1;
+    else if (kb.primary != null) return 1;
+    if (ka.id9 != null && kb.id9 != null && ka.id9 !== kb.id9) return kb.id9 - ka.id9;
+    if (ka.id9 != null && kb.id9 == null) return -1;
+    if (kb.id9 != null && ka.id9 == null) return 1;
+    return b.origIndex - a.origIndex;
+  });
+}
+function weaponDupScore(w) {
+  let s = 0;
+  s += (w.ikinari || []).length * 3;
+  s += (w.chosen || []).length * 2;
+  s += (w.skills || []).filter(function(x){ return x.desc && x.desc.indexOf('要データ取得') === -1; }).length;
+  s += (w.passives || []).length;
+  s += (w.limitBreakEffects || []).length;
+  if (w.verified) s += 5;
+  if (w.attack0 != null) s += 1;
+  if (w.attack4 != null) s += 1;
+  if (w.note) s += 1;
+  return s;
+}
+function buildDupMaps(allWeapons) {
+  const byKey = {};
+  allWeapons.forEach(function(w){
+    const k = normalizeName(w.name);
+    if (!byKey[k]) byKey[k] = [];
+    byKey[k].push(w);
+  });
+  const dupCounts = {};
+  const keepIdByKey = {};
+  Object.keys(byKey).forEach(function(k){
+    const group = byKey[k];
+    dupCounts[k] = group.length;
+    if (group.length <= 1) return;
+    let best = group[0], bestScore = weaponDupScore(group[0]);
+    group.forEach(function(w){
+      const sc = weaponDupScore(w);
+      if (sc > bestScore) { best = w; bestScore = sc; }
+    });
+    keepIdByKey[k] = best.id;
+  });
+  return { byKey: byKey, dupCounts: dupCounts, keepIdByKey: keepIdByKey };
+}
+
 /* ============ DB管理タブ ============ */
 function renderDB() {
   const vn = weapons.filter(function(w){ return w.verified; }).length;
   let defCnt = 0;
-  
-  let targetWeapons = weapons;
-  if (state.dbListFilter === 'unverified') {
-    targetWeapons = weapons.filter(function(w){ return !w.verified; });
-  } else if (state.dbListFilter === 'deficient') {
-    targetWeapons = weapons.filter(function(w){ return checkDeficient(w); });
-  } else if (state.dbListFilter === 'duplicate') {
-    const nc = {};
-    weapons.forEach(function(w){ nc[w.name] = (nc[w.name] || 0) + 1; });
-    targetWeapons = weapons.filter(function(w){ return nc[w.name] > 1; });
-  }
-
   weapons.forEach(function(w){ if (checkDeficient(w)) defCnt++; });
 
+  const dupMaps = buildDupMaps(weapons);
+  const indexed = weapons.map(function(w, i){ return { w: w, origIndex: i }; });
+
+  let targetIndexed = indexed;
+  if (state.dbListFilter === 'unverified') {
+    targetIndexed = indexed.filter(function(x){ return !x.w.verified; });
+  } else if (state.dbListFilter === 'deficient') {
+    targetIndexed = indexed.filter(function(x){ return checkDeficient(x.w); });
+  } else if (state.dbListFilter === 'duplicate') {
+    targetIndexed = indexed.filter(function(x){
+      return (dupMaps.dupCounts[normalizeName(x.w.name)] || 0) > 1;
+    });
+  }
+
   $('dbCountLabel').textContent = '登録武器一覧（全' + weapons.length + '件 ／ ✅検証済 ' + vn + '件 ／ 🚨不備 ' + defCnt + '件）';
-  
+
   let html = '';
-  if (targetWeapons.length === 0) {
+  if (targetIndexed.length === 0) {
     html = '<div class="note" style="text-align:center;padding:10px 0">該当する武器がありません</div>';
   } else {
-    const nameCounts = {};
-    weapons.forEach(function(w){ nameCounts[w.name] = (nameCounts[w.name] || 0) + 1; });
-    // 重複グループごとに「残すべき1件」を判定するためのスコア
-    function weaponScore(w) {
-      let s = 0;
-      s += (w.ikinari || []).length * 3;
-      s += (w.chosen || []).length * 2;
-      s += (w.skills || []).filter(function(x){ return x.desc && x.desc.indexOf('要データ取得') === -1; }).length;
-      s += (w.passives || []).length;
-      s += (w.limitBreakEffects || []).length;
-      if (w.verified) s += 5;
-      if (w.attack0 != null) s += 1;
-      if (w.attack4 != null) s += 1;
-      if (w.note) s += 1;
-      return s;
-    }
-    const keepIdByName = {};
-    Object.keys(nameCounts).forEach(function(name){
-      if (nameCounts[name] <= 1) return;
-      const group = weapons.filter(function(w){ return w.name === name; });
-      let best = group[0], bestScore = weaponScore(group[0]);
-      group.forEach(function(w){
-        const sc = weaponScore(w);
-        if (sc > bestScore) { best = w; bestScore = sc; }
-      });
-      keepIdByName[name] = best.id;
+    /* type order: WEAPON_TYPES then any leftover insertion order */
+    const typeOrder = WEAPON_TYPES.slice();
+    const seenType = {};
+    typeOrder.forEach(function(t){ seenType[t] = true; });
+    targetIndexed.forEach(function(x){
+      const t = x.w.type || 'その他';
+      if (!seenType[t]) { typeOrder.push(t); seenType[t] = true; }
     });
-    targetWeapons.forEach(function(w){
-      const isDef = checkDeficient(w);
-      const isDup = nameCounts[w.name] > 1;
-      const isRecommendDelete = isDup && keepIdByName[w.name] !== w.id;
-      html += '<div class="db-row"><span style="font-size:14px">' + (isDef ? '🚨' : (w.verified ? '✅' : '⚠️')) + '</span>';
-      html += '<div class="info"><div class="nm">' + esc(w.name)
-        + (isDup ? ' <span class="chip" style="background:#d86a6a22;border:1px solid #d86a6a88;color:#d86a6a">🔁 重複</span>' : '')
-        + (isRecommendDelete ? ' <span class="chip" style="background:#e0632f22;border:1px solid #e0632f88;color:#e0632f">🗑 削除推奨</span>' : (isDup ? ' <span class="chip" style="background:#5fbf8f22;border:1px solid #5fbf8f88;color:#5fbf8f">✅ 残す推奨</span>' : ''))
-        + '</div><div class="src">' + esc(w.type) + ' ／ ' + esc(w.id) + ' ／ ' + esc(w.source) + '</div></div>';
-      if (!w.verified || isDef) html += '<button class="btn" data-wid="' + w.id + '">再取得プロンプト</button>';
-      html += '<button class="btn danger" data-delwid="' + w.id + '" title="この武器を削除">🗑</button>';
-      html += '</div>';
+
+    const byType = {};
+    targetIndexed.forEach(function(x){
+      const t = x.w.type || 'その他';
+      if (!byType[t]) byType[t] = [];
+      byType[t].push(x);
+    });
+
+    typeOrder.forEach(function(t){
+      const items = byType[t];
+      if (!items || !items.length) return;
+      const sorted = sortNewerFirst(items);
+      const vOk = sorted.filter(function(x){ return x.w.verified; }).length;
+      const vNg = sorted.length - vOk;
+      const isOpen = !!(state.dbOpenTypes && state.dbOpenTypes[t]);
+      html += '<div class="db-type-sec" data-type="' + esc(t) + '">';
+      html += '<button type="button" class="db-type-hdr" data-toggle-type="' + esc(t) + '">';
+      html += '<span class="chev">' + (isOpen ? '▼' : '▶') + '</span>';
+      html += '<span>' + esc(t) + '（' + sorted.length + '）</span>';
+      html += '<span class="cnts">✅' + vOk + ' ⚠️' + vNg + '</span>';
+      html += '</button>';
+      html += '<div class="db-type-body' + (isOpen ? '' : ' collapsed') + '">';
+      if (isOpen) {
+        html += '<label class="sel-all-wrap" data-sel-all-type="' + esc(t) + '" style="padding:6px 0 2px;display:flex"><input type="checkbox" class="db-sel-all" title="この分類を全選択"> この分類を全選択</label>';
+      }
+
+      /* duplicate filter: adjacent by norm key with group label */
+      let renderList;
+      if (state.dbListFilter === 'duplicate') {
+        const groups = {};
+        const gOrder = [];
+        sorted.forEach(function(x){
+          const k = normalizeName(x.w.name);
+          if (!groups[k]) { groups[k] = []; gOrder.push(k); }
+          groups[k].push(x);
+        });
+        renderList = [];
+        gOrder.forEach(function(k){
+          renderList.push({ kind: 'label', key: k, n: groups[k].length });
+          groups[k].forEach(function(x){ renderList.push({ kind: 'row', x: x }); });
+        });
+      } else {
+        renderList = sorted.map(function(x){ return { kind: 'row', x: x }; });
+      }
+
+      renderList.forEach(function(item){
+        if (item.kind === 'label') {
+          html += '<div class="db-dup-group">🔁 重複グループ「' + esc(item.key) + '」×' + item.n + '</div>';
+          return;
+        }
+        const w = item.x.w;
+        const nk = normalizeName(w.name);
+        const isDef = checkDeficient(w);
+        const isDup = (dupMaps.dupCounts[nk] || 0) > 1;
+        const isRecommendDelete = isDup && dupMaps.keepIdByKey[nk] !== w.id;
+        html += '<div class="db-row"><input type="checkbox" class="db-sel" data-selwid="' + esc(w.id) + '">';
+        html += '<span style="font-size:14px">' + (isDef ? '🚨' : (w.verified ? '✅' : '⚠️')) + '</span>';
+        html += '<div class="info"><div class="nm">' + esc(w.name)
+          + (isDup ? ' <span class="chip" style="background:#d86a6a22;border:1px solid #d86a6a88;color:#d86a6a">🔁 重複</span>' : '')
+          + (isRecommendDelete ? ' <span class="chip" style="background:#e0632f22;border:1px solid #e0632f88;color:#e0632f">🗑 削除推奨</span>' : (isDup ? ' <span class="chip" style="background:#5fbf8f22;border:1px solid #5fbf8f88;color:#5fbf8f">✅ 残す推奨</span>' : ''))
+          + '</div><div class="src">' + esc(w.type) + ' ／ ' + esc(w.id) + ' ／ ' + esc(w.source) + '</div></div>';
+        if (!w.verified || isDef) html += '<button class="btn" data-wid="' + w.id + '">再取得プロンプト</button>';
+        html += '<button class="btn danger" data-delwid="' + w.id + '" title="この武器を削除">🗑</button>';
+        html += '</div>';
+      });
+
+      html += '</div></div>';
     });
   }
   $('dbList').innerHTML = html;
+
+  Array.prototype.forEach.call($('dbList').querySelectorAll('button[data-toggle-type]'), function(b){
+    b.addEventListener('click', function(){
+      const t = b.getAttribute('data-toggle-type');
+      if (!state.dbOpenTypes) state.dbOpenTypes = {};
+      state.dbOpenTypes[t] = !state.dbOpenTypes[t];
+      renderDB();
+    });
+  });
 
   Array.prototype.forEach.call($('dbList').querySelectorAll('button[data-delwid]'), function(b){
     b.addEventListener('click', function(){
@@ -1251,6 +1533,26 @@ function renderDB() {
     });
   });
 
+  Array.prototype.forEach.call($('dbList').querySelectorAll('input.db-sel'), function(cb){
+    cb.addEventListener('click', function(e){ e.stopPropagation(); });
+    cb.addEventListener('change', updateDbSelToolbar);
+  });
+
+  Array.prototype.forEach.call($('dbList').querySelectorAll('.sel-all-wrap'), function(wrap){
+    const cb = wrap.querySelector('input.db-sel-all');
+    if (!cb) return;
+    cb.addEventListener('change', function(){
+      const sec = wrap.closest('.db-type-sec');
+      if (!sec) return;
+      Array.prototype.forEach.call(sec.querySelectorAll('input.db-sel'), function(rowCb){
+        rowCb.checked = cb.checked;
+      });
+      updateDbSelToolbar();
+    });
+  });
+
+  updateDbSelToolbar();
+
   let bHtml = '<option value="すべて">⚠️未検証すべての武器種（' + weapons.filter(function(w){return !w.verified;}).length + '本）</option>';
   if (defCnt > 0) {
     bHtml += '<option value="deficient_only">🚨データ不備の武器のみ（' + defCnt + '本）</option>';
@@ -1266,8 +1568,38 @@ function renderDB() {
   $('batchType').innerHTML = bHtml;
 }
 
+function getSelectedDbIds() {
+  const ids = [];
+  if (!$('dbList')) return ids;
+  Array.prototype.forEach.call($('dbList').querySelectorAll('input.db-sel:checked'), function(cb){
+    ids.push(cb.getAttribute('data-selwid'));
+  });
+  return ids;
+}
+function updateDbSelToolbar() {
+  const ids = getSelectedDbIds();
+  const btn = $('dbSelDelete');
+  const lab = $('dbSelCount');
+  if (btn) btn.disabled = ids.length === 0;
+  if (lab) lab.textContent = '選択: ' + ids.length;
+}
+
 $('dbListFilter').addEventListener('change', function(){
   state.dbListFilter = this.value;
+  renderDB();
+});
+
+$('dbSelDelete').addEventListener('click', function(){
+  const ids = getSelectedDbIds();
+  if (!ids.length) return;
+  if (!window.confirm(ids.length + '件削除しますか？')) return;
+  const delSet = {};
+  ids.forEach(function(id){ delSet[id] = true; });
+  const before = weapons.length;
+  weapons = weapons.filter(function(w){ return !delSet[w.id]; });
+  const removed = before - weapons.length;
+  persist();
+  $('ioMsg').textContent = '🗑 選択削除: ' + removed + '件削除しました';
   renderDB();
 });
 
@@ -1358,9 +1690,207 @@ $('exportBtn').addEventListener('click', function(){
   }
 });
 
+
+/* ============ 使い方Tips（武器DBと分離） ============ */
+function loadTips() {
+  const raw = lsGet(LS_TIPS);
+  if (raw) {
+    try {
+      const p = JSON.parse(raw);
+      if (Array.isArray(p)) return p;
+    } catch (e) {}
+  }
+  return [];
+}
+function persistTips() { lsSet(LS_TIPS, JSON.stringify(usageTips)); }
+
+function tipSortKey(t, idx) {
+  const u = t && t.updatedAt != null ? String(t.updatedAt) : '';
+  return { u: u, idx: idx };
+}
+function sortTipsNewestFirst(list) {
+  return list.map(function(t, i){ return { t: t, i: i }; }).sort(function(a, b){
+    const ka = tipSortKey(a.t, a.i), kb = tipSortKey(b.t, b.i);
+    if (ka.u && kb.u && ka.u !== kb.u) return ka.u > kb.u ? -1 : 1;
+    if (ka.u && !kb.u) return -1;
+    if (!ka.u && kb.u) return 1;
+    return b.i - a.i;
+  }).map(function(x){ return x.t; });
+}
+
+function importTips(jsonText, current) {
+  let parsed;
+  try { parsed = JSON.parse(jsonText); }
+  catch (e) {
+    const stripped = jsonText.replace(/```json|```/g, '').trim();
+    try { parsed = JSON.parse(stripped); }
+    catch (e2) { return { ok: false, msg: 'JSONの解析に失敗：' + e2.message }; }
+  }
+  let arr;
+  if (Array.isArray(parsed)) arr = parsed;
+  else if (parsed && Array.isArray(parsed.tips)) arr = parsed.tips;
+  else if (parsed && Array.isArray(parsed.items)) arr = parsed.items;
+  else if (parsed && typeof parsed === 'object' && parsed.id) arr = [parsed];
+  else return { ok: false, msg: 'Tips配列（または {tips:[...]}）が必要です' };
+
+  for (let i = 0; i < arr.length; i++) {
+    const t = arr[i];
+    if (!t || !t.id || !t.title) {
+      return { ok: false, msg: (i+1) + '件目のTipsで id / title が欠けています' };
+    }
+  }
+  const map = new Map();
+  current.forEach(function(t){ map.set(t.id, t); });
+  let overwriteN = 0, newN = 0;
+  arr.forEach(function(t){
+    const base = {
+      weaponId: '', weaponName: '', summary: '', body: '', tags: [], sources: [],
+      updatedAt: '', verified: false
+    };
+    if (map.has(t.id)) {
+      map.set(t.id, Object.assign({}, base, map.get(t.id), t));
+      overwriteN++;
+    } else {
+      map.set(t.id, Object.assign({}, base, t));
+      newN++;
+    }
+  });
+  return {
+    ok: true,
+    msg: 'Tips取込: 上書き ' + overwriteN + ' / 新規 ' + newN,
+    tips: Array.from(map.values())
+  };
+}
+
+function weaponFilterKey(t) {
+  if (t.weaponId) return 'id:' + t.weaponId;
+  if (t.weaponName) return 'name:' + t.weaponName;
+  return '';
+}
+function weaponFilterLabel(t) {
+  return t.weaponName || t.weaponId || '（武器未指定）';
+}
+
+function renderTips() {
+  const filter = state.tipsWeaponFilter || '';
+  let list = usageTips.slice();
+  if (filter) {
+    list = list.filter(function(t){ return weaponFilterKey(t) === filter; });
+  }
+  list = sortTipsNewestFirst(list);
+
+  $('tipsCountLabel').textContent = 'Tips一覧（表示 ' + list.length + ' / 全' + usageTips.length + '件）';
+
+  /* filter options */
+  const seen = {};
+  const opts = [{ key: '', label: 'すべての武器' }];
+  sortTipsNewestFirst(usageTips).forEach(function(t){
+    const k = weaponFilterKey(t);
+    if (!k || seen[k]) return;
+    seen[k] = true;
+    opts.push({ key: k, label: weaponFilterLabel(t) });
+  });
+  let oHtml = '';
+  opts.forEach(function(o){
+    oHtml += '<option value="' + esc(o.key) + '"' + (o.key === filter ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+  });
+  $('tipsWeaponFilter').innerHTML = oHtml;
+
+  if (!list.length) {
+    $('tipsList').innerHTML = '<div class="note" style="text-align:center;padding:12px 0">' +
+      (usageTips.length ? 'フィルタに合うTipsがありません' : 'まだTipsがありません。下の専用欄から取り込んでください') + '</div>';
+    return;
+  }
+
+  let html = '';
+  list.forEach(function(t){
+    html += '<div class="tip-card">';
+    html += '<div class="tip-title">' + (t.verified ? '✅ ' : '⚠️ ') + esc(t.title) + '</div>';
+    html += '<div class="tip-meta">';
+    if (t.weaponName || t.weaponId) {
+      html += '武器: ' + esc(t.weaponName || t.weaponId);
+      if (t.weaponName && t.weaponId) html += '（' + esc(t.weaponId) + '）';
+      html += ' ／ ';
+    }
+    html += '更新: ' + esc(t.updatedAt || '—') + ' ／ id: ' + esc(t.id);
+    html += '</div>';
+    if (t.summary) html += '<div class="tip-summary">' + esc(t.summary) + '</div>';
+    if (t.body) html += '<div class="tip-body">' + esc(t.body) + '</div>';
+    if (t.tags && t.tags.length) {
+      html += '<div class="tip-tags">';
+      t.tags.forEach(function(tag){ html += chip('#7aa8f0', tag); });
+      html += '</div>';
+    }
+    if (t.sources && t.sources.length) {
+      html += '<div class="tip-sources" style="margin-top:6px">';
+      t.sources.forEach(function(url){
+        const u = String(url);
+        html += '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(u) + '</a>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  $('tipsList').innerHTML = html;
+}
+
+$('tipsWeaponFilter').addEventListener('change', function(){
+  state.tipsWeaponFilter = this.value;
+  renderTips();
+});
+
+function doImportTips(text, sourceLabel) {
+  const result = importTips(text, usageTips);
+  if (result.ok) {
+    usageTips = result.tips;
+    persistTips();
+    $('tipsIoArea').value = '';
+    $('tipsMsg').textContent = '✅ [' + sourceLabel + '] ' + result.msg;
+    renderTips();
+  } else {
+    $('tipsMsg').textContent = '❌ [' + sourceLabel + '] ' + result.msg;
+  }
+}
+
+$('tipsImportBtn').addEventListener('click', function(){
+  doImportTips($('tipsIoArea').value, '貼り付け');
+});
+$('tipsFileInput').addEventListener('change', function(e){
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){ doImportTips(ev.target.result, 'ファイル:' + file.name); e.target.value = ''; };
+  reader.onerror = function(){ $('tipsMsg').textContent = '❌ ファイルの読み込みに失敗しました'; };
+  reader.readAsText(file, 'utf-8');
+});
+$('tipsExportBtn').addEventListener('click', function(){
+  const text = JSON.stringify(usageTips, null, 2);
+  try {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dqw-usage-tips-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    $('tipsMsg').textContent = '✅ dqw-usage-tips-*.json としてダウンロードしました（' + usageTips.length + '件）';
+  } catch (e) {
+    $('tipsIoArea').value = text;
+    $('tipsMsg').textContent = '✅ Tips（' + usageTips.length + '件）を欄に出力しました（ダウンロード不可）';
+  }
+});
+$('tipsClearBtn').addEventListener('click', function(){
+  if (!usageTips.length) { $('tipsMsg').textContent = 'Tipsは既に空です'; return; }
+  if (!window.confirm('Tipsを全' + usageTips.length + '件消去しますか？（武器DBは消えません）')) return;
+  usageTips = [];
+  persistTips();
+  $('tipsMsg').textContent = '🗑 Tipsを全消去しました';
+  renderTips();
+});
+
 /* ============ 起動 ============ */
 function boot(initialWeapons) {
   weapons = initialWeapons;
+  usageTips = loadTips();
   applyTheme(lsGet(LS_THEME) || 'dark');
   (function(){
     let fHtml = '<option value="すべて">全種</option>';
